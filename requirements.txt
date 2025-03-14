@@ -1,0 +1,5 @@
+python-dotenv~=1.0.1
+fastapi[all]~=0.115.11
+PyJWT~=2.9.0
+psycopg2-binary==2.9.10
+pydantic~=2.10.6
