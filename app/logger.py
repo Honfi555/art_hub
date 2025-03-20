@@ -50,15 +50,16 @@ def configure_logs_on_file(logs_path: str = "logs/app.log") -> None:
 	atexit.register(log_file.close)
 
 
-def configure_logs(logs_path: str = "logs/app.log", log_level: int = logging.INFO) -> None:
+def configure_logs(name: str, logs_path: str = "logs/app.log", log_level: int = logging.INFO) -> logging.Logger:
 	"""
 	Настраивает вывод и сохранение логов в файл и вывод в консоль.
+	:param name: Название файла, в котором создаётся логгер.
 	:param log_level: Урень логирования, стандартное значение INFO.
 	:param logs_path: Путь к файлу с логами.
 	"""
 
 	# Получаем корневой логгер
-	logger = logging.getLogger()
+	logger = logging.getLogger(name=name)
 	logger.setLevel(log_level)
 
 	# Проверяем, есть ли уже обработчики, чтобы избежать добавления дубликатов
@@ -67,33 +68,27 @@ def configure_logs(logs_path: str = "logs/app.log", log_level: int = logging.INF
 		# Настройка RotatingFileHandler для файла логов с максимальным размером 50 МБ и 3 резервными копиями
 		file_handler = RotatingFileHandler(
 			logs_path,
+			mode='a',
 			maxBytes=50 * 1024 * 1024,  # 50 МБ
 			backupCount=3,
 			encoding='utf-8'
 		)
-		file_formatter = logging.Formatter('%(asctime)s %(levelname)s: %(message)s')
-		file_handler.setFormatter(file_formatter)
-		logger.addHandler(file_handler)
+		file_handler.setLevel(log_level)
+		file_handler.setFormatter(logging.Formatter('%(asctime)s %(levelname)s: %(message)s'))
 
 		# Добавляем обработчик для консоли
 		console_handler = logging.StreamHandler(sys.stdout)
 		console_handler.setLevel(log_level)
-		console_formatter = logging.Formatter('%(asctime)s %(levelname)s: %(message)s')
-		console_handler.setFormatter(console_formatter)
+		console_handler.setFormatter(logging.Formatter('%(asctime)s %(levelname)s: %(message)s'))
+
+		logger.addHandler(file_handler)
 		logger.addHandler(console_handler)
 
-		# Перенаправляем stdout и stderr в файл
-		try:
-			log_file = open(logs_path, 'a', encoding='utf-8')
-			sys.stdout = log_file
-			sys.stderr = log_file
-			atexit.register(log_file.close)
-		except Exception as e:
-			logger.error("Не удалось перенаправить stdout/stderr: %s", e)
+	return logger
 
 
 if __name__ == "__main__":
-	configure_logs()
+	configure_logs(__name__)
 	logging.info("Это информационное сообщение")
 	logging.warning("Это предупреждающее сообщение")
 	logging.error("Это сообщение об ошибке")
