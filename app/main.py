@@ -1,13 +1,10 @@
 from fastapi import FastAPI
 from fastapi.middleware.cors import CORSMiddleware
 
-from .routers import authorization
-# from .routers import user_card
-from .logger import configure_logs
+from .routers.authorization import authorization_router
+from .routers.feed import feed_router
 
-configure_logs()
-
-app = FastAPI()
+app: FastAPI = FastAPI()
 
 app.add_middleware(
     CORSMiddleware,
@@ -17,5 +14,5 @@ app.add_middleware(
     allow_headers=["*"],
 )
 
-app.include_router(authorization.router)
-# app.include_router(user_card.router)
+app.include_router(authorization_router)
+app.include_router(feed_router)
