@@ -1,13 +1,15 @@
-import logging
+from logging import Logger
 import hashlib
 
 from psycopg2 import extensions
 from psycopg2.extras import DictCursor
 from psycopg2 import OperationalError, InterfaceError, errors
 
+from ..logger import configure_logs
 from .connect import connect
 from .exceptions.change_password import *
 
+logger: Logger = configure_logs(__name__)
 UserData = dict[str, any]
 
 
@@ -27,15 +29,15 @@ def insert_user(cur: extensions.cursor, user: dict) -> bool:
             hashlib.sha256(user.get('password').encode('utf-8'), usedforsecurity=True).hexdigest(),
             user.get('description')
         )
-        logging.debug("Вставка пользователя с login %s", user.get('login'))
+        logger.debug("Вставка пользователя с login %s", user.get('login'))
         cur.execute(query, params)
-        logging.debug("Пользователь с login %s успешно вставлен.", user.get('login'))
+        logger.debug("Пользователь с login %s успешно вставлен.", user.get('login'))
         return True
     except errors.UniqueViolation as e:
-        logging.exception("Пользователь с login %s уже существует: %s", user.get('login'), e)
+        logger.exception("Пользователь с login %s уже существует: %s", user.get('login'), e)
         raise
     except Exception as e:
-        logging.exception("Ошибка при вставке пользователя с login %s: %s", user.get('login'), e)
+        logger.exception("Ошибка при вставке пользователя с login %s: %s", user.get('login'), e)
         return False
 
 
@@ -52,7 +54,7 @@ def change_password(login: str, old_password: str, new_password: str) -> bool:
                 raise IncorrectLoginException(f"Логин {login} не найден")
 
             if password[0] != hashlib.sha256(old_password.encode('utf-8'), usedforsecurity=True).hexdigest():
-                logging.info("1")
+                logger.info("1")
                 raise OldPasswordMismatchException("Неверный старый пароль")
 
             if old_password == new_password:
@@ -62,10 +64,10 @@ def change_password(login: str, old_password: str, new_password: str) -> bool:
             cur.execute(query_update,
                         (hashlib.sha256(new_password.encode('utf-8'), usedforsecurity=True).hexdigest(), login))
             conn.commit()
-            logging.debug("Пароль успешно изменён для пользователя с login %s", login)
+            logger.debug("Пароль успешно изменён для пользователя с login %s", login)
             return True
     except (OperationalError, InterfaceError) as e:
-        logging.error("Ошибка соединения: %s", e)
+        logger.error("Ошибка соединения: %s", e)
         return False
     finally:
         if conn:
@@ -77,7 +79,7 @@ def process_user(user: dict) -> bool:
     Обрабатывает и вставляет пользователя в базу данных.
     Использует метод static.connect() для получения соединения.
     """
-    logging.info("Начало обработки пользователя %s.", user.get('login'))
+    logger.info("Начало обработки пользователя %s.", user.get('login'))
     conn = None
     try:
         conn = connect()  # Получаем соединение через static.connect()
@@ -85,27 +87,27 @@ def process_user(user: dict) -> bool:
         with conn.cursor(cursor_factory=DictCursor) as cur:
             # Устанавливаем search_path для использования схемы users
             cur.execute("SET search_path TO users, public;")
-            logging.debug("Поисковый путь установлен на схемы 'users' и 'public'.")
+            logger.debug("Поисковый путь установлен на схемы 'users' и 'public'.")
 
         with conn.cursor(cursor_factory=DictCursor) as cur:
             if not insert_user(cur, user):
                 conn.rollback()
-                logging.error("Ошибка вставки пользователя %s, транзакция откатилась.", user.get('login'))
+                logger.error("Ошибка вставки пользователя %s, транзакция откатилась.", user.get('login'))
                 return False
 
         conn.commit()
-        logging.info("Транзакция зафиксирована для пользователя %s.", user.get('login'))
+        logger.info("Транзакция зафиксирована для пользователя %s.", user.get('login'))
         return True
     except (OperationalError, InterfaceError) as e:
         if conn:
             conn.rollback()
-        logging.error("Ошибка соединения для пользователя %s. Ошибка: %s", user.get('login'), e)
+        logger.error("Ошибка соединения для пользователя %s. Ошибка: %s", user.get('login'), e)
     except errors.UniqueViolation as e:
         raise
     except Exception as e:
         if conn:
             conn.rollback()
-        logging.error("Транзакция откатилась для пользователя %s. Ошибка: %s", user.get('login'), e)
+        logger.error("Транзакция откатилась для пользователя %s. Ошибка: %s", user.get('login'), e)
     finally:
         if conn:
             conn.close()
@@ -115,7 +117,7 @@ def check_credentials(login: str, password: str) -> bool:
     """
     Проверяет корректность логина и пароля, подключаясь напрямую к базе данных.
     """
-    logging.info("Начало проверки учетных данных в базе данных.")
+    logger.info("Начало проверки учетных данных в базе данных.")
     conn = None
     try:
         # Прямое подключение к базе данных без пула соединений
@@ -135,13 +137,13 @@ def check_credentials(login: str, password: str) -> bool:
             hashed_password = hashlib.sha256(password.encode('utf-8'), usedforsecurity=True).hexdigest()
             cur.execute(query, (login, hashed_password))
             result = bool(cur.fetchone()[0])
-            logging.info("Результат проверки учетных данных: %s", result)
+            logger.info("Результат проверки учетных данных: %s", result)
             return result
     except (OperationalError, InterfaceError) as e:
-        logging.error("Ошибка соединения: %s", e)
+        logger.error("Ошибка соединения: %s", e)
         raise
     except Exception as e:
-        logging.error("Ошибка при выполнении запроса: %s", e)
+        logger.error("Ошибка при выполнении запроса: %s", e)
         raise
     finally:
         if conn:
@@ -152,7 +154,7 @@ def check_login(login: str) -> bool:
     """
     Проверяет корректность логина, подключаясь напрямую к базе данных.
     """
-    logging.info("Начало проверки логина в базе данных.")
+    logger.info("Начало проверки логина в базе данных.")
     conn = None
     try:
         # Прямое подключение к базе данных без пула соединений
@@ -171,13 +173,13 @@ def check_login(login: str) -> bool:
             """
             cur.execute(query, (login, ))
             result = bool(cur.fetchone()[0])
-            logging.info("Результат проверки логина: %s", result)
+            logger.info("Результат проверки логина: %s", result)
             return result
     except (OperationalError, InterfaceError) as e:
-        logging.error("Ошибка соединения: %s", e)
+        logger.error("Ошибка соединения: %s", e)
         raise
     except Exception as e:
-        logging.error("Ошибка при выполнении запроса: %s", e)
+        logger.error("Ошибка при выполнении запроса: %s", e)
         raise
     finally:
         if conn:

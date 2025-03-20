@@ -1,10 +1,13 @@
-import logging
+from logging import Logger
 
 import psycopg2
 from psycopg2._psycopg import connection
 from psycopg2.pool import SimpleConnectionPool
 
+from ..logger import configure_logs
 from ..static import DATA_SOURCE
+
+logger: Logger = configure_logs(__name__)
 
 # Настройка пула соединений
 POOL_MIN_CONN = 1
@@ -23,7 +26,7 @@ def connect() -> connection | None:
             dsn=DATA_SOURCE,
             port=5432
         )
-        logging.info("Подключение к базе данных успешно.")
+        logger.info("Подключение к базе данных успешно.")
         return db_connection
     except Exception as e:
-        logging.error("Ошибка подключения к базе данных: %s", e)
+        logger.error("Ошибка подключения к базе данных: %s", e)
