@@ -2,6 +2,7 @@ from fastapi import FastAPI
 from fastapi.middleware.cors import CORSMiddleware
 
 from .routers.authorization import authorization_router
+from .routers.users import users_router
 from .routers.feed import feed_router
 
 app: FastAPI = FastAPI()
@@ -16,3 +17,4 @@ app.add_middleware(
 
 app.include_router(authorization_router)
 app.include_router(feed_router)
+app.include_router(users_router)

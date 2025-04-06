@@ -6,21 +6,28 @@ from typing import Optional
 
 import jwt
 from jwt import InvalidTokenError, ExpiredSignatureError
-from fastapi import HTTPException, Header, status
+from fastapi import HTTPException, status
 
 from .logger import configure_logs
 from .static import SECRET_KEY, ALGORITHM
 
 logger: Logger = configure_logs(__name__)
 
-def verify_jwt_token(f: Callable) -> Optional[Callable]:
+
+def verify_jwt(f: Callable) -> Optional[Callable]:
     @wraps(f)
-    async def wrapper(authorization: str = Header(...), **kwargs) -> Optional[Callable]:
+    async def wrapper(*args, **kwargs) -> Optional[Callable]:
         """
-        Функция-проверка JWT токена, передаваемого в заголовке Authorization.
+        Функция-проверка JWT, передаваемого в заголовке Authorization.
         Ожидается формат: "Bearer <token>"
         """
         try:
+            authorization = kwargs.get("authorization")
+            if not authorization:
+                raise HTTPException(
+                    status_code=status.HTTP_401_UNAUTHORIZED,
+                    detail="Отсутствует заголовок авторизации",
+                )
             scheme, _, token = authorization.partition(" ")
             if scheme.lower() != "bearer" or not token:
                 raise HTTPException(
@@ -33,16 +40,16 @@ def verify_jwt_token(f: Callable) -> Optional[Callable]:
             raise HTTPException(status.HTTP_401_UNAUTHORIZED, "Срок действия токена истек")
         except InvalidTokenError:
             raise HTTPException(status.HTTP_401_UNAUTHORIZED, "Недействительный токен")
-        return await f(authorization, **kwargs)
+        return await f(*args, **kwargs)
     return wrapper
 
 
-def create_jwt_token(login: str, lifetime=timedelta(days=1)) -> str:
+def create_jwt(login: str, lifetime=timedelta(days=1)) -> str:
     """
-    Создаёт JWT токен
+    Создаёт JWT.
     :param login: Логин пользователя
     :param lifetime: Время жизни токена
-    :return: JWT токен в формате строки
+    :return: JWT в формате строки
     """
     return jwt.encode({
         "username": login,

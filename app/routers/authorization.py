@@ -7,7 +7,7 @@ from ..logger import configure_logs
 from ..models.authorization import SignInData, ChangePasswordData
 from ..database.users import process_user, check_credentials, check_login, change_password
 from ..database.exceptions.change_password import *
-from ..dependecies import create_jwt_token, verify_jwt_token
+from ..dependecies import create_jwt, verify_jwt
 
 authorization_router: APIRouter = APIRouter(
 	prefix="/auth",
@@ -23,7 +23,7 @@ async def sign_in_route(data: SignInData):
 	if not check_credentials(data.login, data.password):
 		raise HTTPException(status.HTTP_401_UNAUTHORIZED, "Введён неверный пароль")
 	return JSONResponse(content={"message": "Аутентификация пользователя прошла успешно",
-								 "token": create_jwt_token(data.login)},
+								 "token": create_jwt(data.login)},
 						status_code=status.HTTP_200_OK)
 
 
@@ -32,7 +32,7 @@ async def sign_up_route(data: SignInData):
 	try:
 		process_user(user={"login": data.login, "password": data.password, "description": ""})
 		return JSONResponse(content={"message": "Пользователь успешно зарегистрирован",
-									 "token": create_jwt_token(data.login)},
+									 "token": create_jwt(data.login)},
 							status_code=status.HTTP_201_CREATED)
 	except UniqueViolation:
 		raise HTTPException(status.HTTP_409_CONFLICT, "Пользователь с таким логином уже существует")
@@ -44,7 +44,7 @@ async def sign_up_route(data: SignInData):
 
 
 @authorization_router.post("/change_password")
-@verify_jwt_token
+@verify_jwt
 async def change_password_route(data: ChangePasswordData, authorization: str = Header(...)):
 	try:
 		if change_password(data.login, data.old_password, data.new_password):
