@@ -42,7 +42,7 @@ def insert_user(cur: extensions.cursor, user: dict) -> bool:
 		return False
 
 
-def change_password(login: str, old_password: str, new_password: str) -> bool:
+def change_password(login: str, old_password: str, new_password: str) -> bool | None:
 	conn = None
 	try:
 		conn = connect()
@@ -55,7 +55,6 @@ def change_password(login: str, old_password: str, new_password: str) -> bool:
 				raise IncorrectLoginException(f"Логин {login} не найден")
 
 			if password[0] != hashlib.sha256(old_password.encode('utf-8'), usedforsecurity=True).hexdigest():
-				logger.info("1")
 				raise OldPasswordMismatchException("Неверный старый пароль")
 
 			if old_password == new_password:
@@ -75,7 +74,7 @@ def change_password(login: str, old_password: str, new_password: str) -> bool:
 			conn.close()
 
 
-def process_user(user: dict) -> bool:
+def process_user(user: dict) -> bool | None:
 	"""
 	Обрабатывает и вставляет пользователя в базу данных.
 	Использует метод static.connect() для получения соединения.
@@ -103,7 +102,7 @@ def process_user(user: dict) -> bool:
 		if conn:
 			conn.rollback()
 		logger.error("Ошибка соединения для пользователя %s. Ошибка: %s", user.get('login'), e)
-	except errors.UniqueViolation as e:
+	except errors.UniqueViolation:
 		raise
 	except Exception as e:
 		if conn:
@@ -114,7 +113,7 @@ def process_user(user: dict) -> bool:
 			conn.close()
 
 
-def check_credentials(login: str, password: str) -> bool:
+def check_credentials(login: str, password: str) -> bool | None:
 	"""
 	Проверяет корректность логина и пароля, подключаясь напрямую к базе данных.
 	"""
@@ -151,7 +150,7 @@ def check_credentials(login: str, password: str) -> bool:
 			conn.close()
 
 
-def check_login(login: str) -> bool:
+def check_login(login: str) -> bool | None:
 	"""
 	Проверяет корректность логина, подключаясь напрямую к базе данных.
 	"""
@@ -173,7 +172,7 @@ def check_login(login: str) -> bool:
                 END AS is_valid;
             """
 			cur.execute(query, (login,))
-			result = bool(cur.fetchone()[0])
+			result: bool = bool(cur.fetchone()[0])
 			logger.info("Результат проверки логина: %s", result)
 			return result
 	except (OperationalError, InterfaceError) as e:
@@ -211,6 +210,21 @@ def select_user_info(username: str) -> AuthorInfo:
 	except Exception as e:
 		logger.error("Ошибка при выполнении запроса: %s", e)
 		raise
+	finally:
+		if conn:
+			conn.close()
+
+
+def change_description(username: str, description: str) -> None:
+	conn = None
+	try:
+		conn = connect()
+		with conn.cursor() as cur:
+			cur.execute("UPDATE users.users SET description = %s WHERE login = %s;", (description, username))
+			conn.commit()
+			logger.debug("Описание успешно изменёно для пользователя с login %s", username)
+	except (OperationalError, InterfaceError) as e:
+		logger.error("Ошибка соединения: %s", e)
 	finally:
 		if conn:
 			conn.close()

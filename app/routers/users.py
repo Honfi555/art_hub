@@ -1,12 +1,12 @@
 from logging import Logger
 
-from fastapi import APIRouter, Header, status, HTTPException
+from fastapi import APIRouter, Header, Body, status, HTTPException
 from fastapi.responses import JSONResponse
 
 from ..logger import configure_logs
-from ..dependecies import verify_jwt
-from ..models.user_info import AuthorInfo
-from ..database.users import select_user_info
+from ..dependecies import verify_jwt, get_jwt_login
+from ..models.user_info import AuthorInfo, DescriptionUpdate
+from ..database.users import select_user_info, change_description
 
 users_router: APIRouter = APIRouter(
 	prefix="/users",
@@ -21,5 +21,16 @@ async def get_author(author_name: str, authorization: str = Header(...)):
 	try:
 		author_info: AuthorInfo = select_user_info(username=author_name)
 		return JSONResponse(status_code=status.HTTP_200_OK, content={"author_info": author_info})
+	except Exception as e:
+		raise HTTPException(status_code=status.HTTP_500_INTERNAL_SERVER_ERROR, detail=str(e))
+
+
+@users_router.post("/update_description")
+@verify_jwt
+async def update_description(data: DescriptionUpdate, authorization: str = Header(...)):
+	try:
+		login: str = get_jwt_login(authorization)
+		change_description(login, data.description)
+		return JSONResponse(status_code=status.HTTP_200_OK, content={"message": "success"})
 	except Exception as e:
 		raise HTTPException(status_code=status.HTTP_500_INTERNAL_SERVER_ERROR, detail=str(e))
