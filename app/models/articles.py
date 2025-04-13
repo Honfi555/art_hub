@@ -13,3 +13,22 @@ class ArticleData(BaseModel):
 	title: str
 	user_name: str
 	article_body: str
+
+
+class ArticleFull(BaseModel):
+	id: int
+	title: str
+	user_name: str
+	announcement: str
+	article_body: str
+
+
+class ArticleAdd(BaseModel):
+	title: str
+	announcement: str
+	article_body: str
+
+
+class ImagesAdd(BaseModel):
+	article_id: int
+	images: list[str]
