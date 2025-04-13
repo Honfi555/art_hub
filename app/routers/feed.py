@@ -22,9 +22,12 @@ logger: Logger = configure_logs(__name__)
 
 @feed_router.get("/articles")
 @verify_jwt
-async def get_articles(authorization: str = Header(...), login: Optional[str] = None):
+async def get_articles(authorization: str = Header(...),
+					   amount: Optional[int] = 10,
+					   chunk: Optional[int] = 1,
+					   login: Optional[str] = None):
 	try:
-		articles_data: list[ArticleAnnouncement] = select_articles_announcement(login)
+		articles_data: list[ArticleAnnouncement] = select_articles_announcement(amount, chunk, login)
 		return JSONResponse(status_code=status.HTTP_200_OK, content={"articles": articles_data})
 	except Exception as e:
 		raise HTTPException(status_code=status.HTTP_500_INTERNAL_SERVER_ERROR, detail=str(e))

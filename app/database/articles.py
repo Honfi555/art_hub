@@ -12,7 +12,9 @@ from ..models.articles import ArticleData, ArticleAnnouncement, ArticleFull
 logger: Logger = configure_logs(__name__)
 
 
-def select_articles_announcement(login: Optional[str] = None) -> list[ArticleAnnouncement]:
+def select_articles_announcement(amount: Optional[int] = None,
+								 chunk: Optional[int] = None,
+								 login: Optional[str] = None) -> list[ArticleAnnouncement]:
 	logger.info("Начало получения статей из базы данных.")
 	conn = None
 	try:
@@ -32,6 +34,13 @@ def select_articles_announcement(login: Optional[str] = None) -> list[ArticleAnn
 				query += "WHERE us.login = %s"
 				params.append(login)
 			query += "ORDER BY art.article_id DESC"
+			if amount and chunk:
+				query += """
+				OFFSET %s
+				LIMIT %s
+				"""
+				params.extend([(chunk - 1) * amount, amount])
+			logger.info(query)
 			cur.execute(query, params)
 			result = cur.fetchall()
 			logger.info("Количество полученных статей %s", len(result))
