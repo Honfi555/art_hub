@@ -1,3 +1,5 @@
+__all__: list[str] = ["SamePasswordException", "OldPasswordMismatchException", "IncorrectLoginException"]
+
 class IncorrectLoginException(Exception):
     """Исключение выбрасывается, когда указанный логин не найден в базе данных."""
     def __init__(self, message="Неверный логин. Пользователь не найден."):

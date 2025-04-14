@@ -1,6 +1,6 @@
 from logging import Logger
 
-from fastapi import APIRouter, Header, Body, status, HTTPException
+from fastapi import APIRouter, Header, status, HTTPException
 from fastapi.responses import JSONResponse
 
 from ..logger import configure_logs
@@ -8,6 +8,7 @@ from ..dependecies import verify_jwt, get_jwt_login
 from ..models.user_info import AuthorInfo, DescriptionUpdate
 from ..database.users import select_user_info, change_description
 
+__all__: list[str] = ["users_router"]
 users_router: APIRouter = APIRouter(
 	prefix="/users",
 	tags=["Маршруты для получения информации о пользователях"]

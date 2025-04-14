@@ -10,6 +10,8 @@ from .exceptions.change_password import *
 from ..logger import configure_logs
 from ..models.user_info import AuthorInfo
 
+__all__: list[str] = ["insert_user", "change_password", "process_user", "check_credentials", "check_login",
+					  "select_user_info", "change_description"]
 logger: Logger = configure_logs(__name__)
 UserData = dict[str, any]
 

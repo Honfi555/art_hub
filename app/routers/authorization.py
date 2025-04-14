@@ -4,11 +4,12 @@ from fastapi.responses import JSONResponse
 from psycopg2.errors import UniqueViolation
 
 from ..logger import configure_logs
+from ..dependecies import create_jwt, verify_jwt
 from ..models.authorization import SignInData, ChangePasswordData
 from ..database.users import process_user, check_credentials, check_login, change_password
 from ..database.exceptions.change_password import *
-from ..dependecies import create_jwt, verify_jwt
 
+__all__: list[str] = ["authorization_router"]
 authorization_router: APIRouter = APIRouter(
 	prefix="/auth",
 	tags=["Маршруты для действий с аккаунтом пользователя."]

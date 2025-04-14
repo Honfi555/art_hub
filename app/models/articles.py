@@ -1,5 +1,7 @@
 from pydantic import BaseModel
 
+__all__: list[str] = ["ArticleAnnouncement", "ArticleData", "ArticleFull", "ArticleAdd", "ImagesAdd"]
+
 
 class ArticleAnnouncement(BaseModel):
 	id: int
