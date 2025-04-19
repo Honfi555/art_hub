@@ -1,15 +1,15 @@
 from typing import Optional
 from logging import Logger
 
-from fastapi import APIRouter, Header, status, HTTPException
-from fastapi.responses import JSONResponse, StreamingResponse
+from fastapi import APIRouter, Body, Header, Query, status, HTTPException
+from fastapi.responses import JSONResponse
 
 from ..logger import configure_logs
 from ..dependecies import verify_jwt, get_jwt_login
 from ..models.articles import ArticleAnnouncement, ArticleData, ArticleFull, ImagesAdd, ArticleAdd
 from ..database.articles import (select_articles_announcement, select_article, select_article_full, insert_article,
 								 update_article, delete_article)
-from ..database.images import select_article_images, delete_images, insert_images
+from ..database.images import delete_images, insert_images
 
 __all__: list[str] = ["feed_router"]
 feed_router: APIRouter = APIRouter(
@@ -52,54 +52,46 @@ async def get_article(article_id: int, authorization: str = Header(...)):
 		raise HTTPException(status_code=status.HTTP_500_INTERNAL_SERVER_ERROR, detail=str(e))
 
 
-@feed_router.get("/article_images")
-@verify_jwt
-async def get_article_images(article_id: int, authorization: str = Header(...), max_amount: Optional[int] = None):
-	try:
-		article_images: list[tuple[int, bytes]] = select_article_images(article_id, max_amount)
-
-		async def image_streamer():
-			# Границы для multipart ответа
-			boundary = b"--frame\r\n"
-			for image_id, image_bytes in article_images:
-				# Каждое изображение оборачивается в набор заголовков, разделённых границей.
-				yield boundary
-				# Задаём тип контента изображения (в данном случае image/jpeg, если формат другой, укажите его)
-				yield b"Content-Type: image/jpeg\r\n"
-				# Можно добавить дополнительный заголовок, например идентификатор изображения
-				yield f"Content-ID: {image_id}\r\n\r\n".encode()
-				# Передаём сами двоичные данные изображения
-				yield image_bytes
-				yield b"\r\n"
-			# Завершающая граница
-			yield b"--frame--\r\n"
-
-		return StreamingResponse(
-			image_streamer(),
-			media_type="multipart/x-mixed-replace; boundary=frame"
-		)
-	except Exception as e:
-		raise HTTPException(status_code=status.HTTP_500_INTERNAL_SERVER_ERROR, detail=str(e))
-
-
 @feed_router.delete("/remove_images")
 @verify_jwt
-async def remove_article_images(image_ids: list[int], authorization: str = Header(...)):
+async def remove_article_images(
+	article_id: int = Query(..., description="ID статьи"),
+	image_ids: list[str] = Body(..., description="Список ID изображений для удаления"),
+	authorization: str = Header(...)
+):
 	try:
-		delete_images(image_ids)
-		return JSONResponse(status_code=status.HTTP_200_OK, content={"message": "success"})
+		# delete_images теперь принимает article_id и список UUID строк
+		deleted = delete_images(article_id, image_ids)
+		return JSONResponse(
+			status_code=status.HTTP_200_OK,
+			content={"deleted_image_ids": deleted}
+		)
 	except Exception as e:
-		raise HTTPException(status_code=status.HTTP_500_INTERNAL_SERVER_ERROR, detail=str(e))
+		raise HTTPException(
+			status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
+			detail=str(e)
+		)
 
 
 @feed_router.put("/add_images")
 @verify_jwt
-async def add_article_images(images_data: ImagesAdd, authorization: str = Header(...)):
+async def add_article_images(
+	article_id: int = Query(..., description="ID статьи"),
+	images: list[str] = Body(..., description="Список base64-строк или URL файлов для вставки"),
+	authorization: str = Header(...)
+):
 	try:
-		insert_images(images_data)
-		return JSONResponse(status_code=status.HTTP_200_OK, content={"message": "success"})
+		# insert_images возвращает список сгенерированных UUID
+		created = insert_images(ImagesAdd(article_id=article_id, images=images))
+		return JSONResponse(
+			status_code=status.HTTP_201_CREATED,
+			content={"created_image_ids": created}
+		)
 	except Exception as e:
-		raise HTTPException(status_code=status.HTTP_500_INTERNAL_SERVER_ERROR, detail=str(e))
+		raise HTTPException(
+			status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
+			detail=str(e)
+		)
 
 
 @feed_router.post("/add_article")
