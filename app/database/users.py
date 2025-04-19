@@ -5,7 +5,7 @@ from psycopg2 import extensions
 from psycopg2.extras import DictCursor
 from psycopg2 import OperationalError, InterfaceError, errors
 
-from .connect import connect
+from .connect import connect_pg
 from .exceptions.change_password import *
 from ..logger import configure_logs
 from ..models.user_info import AuthorInfo
@@ -47,7 +47,7 @@ def insert_user(cur: extensions.cursor, user: dict) -> bool:
 def change_password(login: str, old_password: str, new_password: str) -> bool | None:
 	conn = None
 	try:
-		conn = connect()
+		conn = connect_pg()
 		with conn.cursor() as cur:
 			query_select: str = "SELECT password FROM users.users WHERE login = %s;"
 			cur.execute(query_select, (login,))
@@ -79,15 +79,14 @@ def change_password(login: str, old_password: str, new_password: str) -> bool | 
 def process_user(user: dict) -> bool | None:
 	"""
 	Обрабатывает и вставляет пользователя в базу данных.
-	Использует метод static.connect() для получения соединения.
+	Использует метод static.connect_pg() для получения соединения.
 	"""
 	logger.info("Начало обработки пользователя %s.", user.get('login'))
 	conn = None
 	try:
-		conn = connect()  # Получаем соединение через static.connect()
-		conn.autocommit = False  # Явное управление транзакциями
+		conn = connect_pg()
+		conn.autocommit = False
 		with conn.cursor(cursor_factory=DictCursor) as cur:
-			# Устанавливаем search_path для использования схемы users
 			cur.execute("SET search_path TO users, public;")
 			logger.debug("Поисковый путь установлен на схемы 'users' и 'public'.")
 
@@ -122,8 +121,7 @@ def check_credentials(login: str, password: str) -> bool | None:
 	logger.info("Начало проверки учетных данных в базе данных.")
 	conn = None
 	try:
-		# Прямое подключение к базе данных без пула соединений
-		conn = connect()
+		conn = connect_pg()
 		with conn.cursor() as cur:
 			query = """
                 SELECT CASE 
@@ -159,8 +157,7 @@ def check_login(login: str) -> bool | None:
 	logger.info("Начало проверки логина в базе данных.")
 	conn = None
 	try:
-		# Прямое подключение к базе данных без пула соединений
-		conn = connect()
+		conn = connect_pg()
 		with conn.cursor() as cur:
 			query = """
                 SELECT CASE 
@@ -192,7 +189,7 @@ def select_user_info(username: str) -> AuthorInfo:
 	logger.info("Начало получения данных о пользователе %s", username)
 	conn = None
 	try:
-		conn = connect()
+		conn = connect_pg()
 		with conn.cursor() as cur:
 			query = """
 				SELECT 
@@ -220,7 +217,7 @@ def select_user_info(username: str) -> AuthorInfo:
 def change_description(username: str, description: str) -> None:
 	conn = None
 	try:
-		conn = connect()
+		conn = connect_pg()
 		with conn.cursor() as cur:
 			cur.execute("UPDATE users.users SET description = %s WHERE login = %s;", (description, username))
 			conn.commit()

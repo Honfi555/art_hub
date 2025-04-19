@@ -3,7 +3,7 @@ from logging import Logger
 
 from psycopg2.errors import OperationalError, InterfaceError
 
-from .connect import connect
+from .connect import connect_pg
 from ..logger import configure_logs
 from ..models.articles import ArticleData, ArticleAnnouncement, ArticleFull
 
@@ -18,7 +18,7 @@ def select_articles_announcement(amount: Optional[int] = None,
 	logger.info("Начало получения статей из базы данных.")
 	conn = None
 	try:
-		conn = connect()
+		conn = connect_pg()
 		with conn.cursor() as cur:
 			query = """
 				SELECT 
@@ -40,7 +40,6 @@ def select_articles_announcement(amount: Optional[int] = None,
 				LIMIT %s
 				"""
 				params.extend([(chunk - 1) * amount, amount])
-			logger.info(query)
 			cur.execute(query, params)
 			result = cur.fetchall()
 			logger.info("Количество полученных статей %s", len(result))
@@ -56,11 +55,11 @@ def select_articles_announcement(amount: Optional[int] = None,
 			conn.close()
 
 
-def select_article(article_id: int) -> ArticleData:
+def select_article(article_id: int) -> ArticleData | None:
 	logger.info("Начало получения статьи, c id %s", article_id)
 	conn = None
 	try:
-		conn = connect()
+		conn = connect_pg()
 		with conn.cursor() as cur:
 			query = """
 				SELECT 
@@ -87,11 +86,11 @@ def select_article(article_id: int) -> ArticleData:
 			conn.close()
 
 
-def select_article_full(article_id: int) -> ArticleFull:
+def select_article_full(article_id: int) -> ArticleFull | None:
 	logger.info("Начало получения полной статьи, c id %s", article_id)
 	conn = None
 	try:
-		conn = connect()
+		conn = connect_pg()
 		with conn.cursor() as cur:
 			query = """
 				SELECT 
@@ -119,11 +118,11 @@ def select_article_full(article_id: int) -> ArticleFull:
 			conn.close()
 
 
-def insert_article(article: ArticleFull) -> int:
+def insert_article(article: ArticleFull) -> int | None:
 	logger.info("Начало вставки статьи, с названием %s", article.title)
 	conn = None
 	try:
-		conn = connect()
+		conn = connect_pg()
 		with conn.cursor() as cur:
 			query = """
 					INSERT INTO articles.articles
@@ -153,7 +152,7 @@ def update_article(article: ArticleData) -> None:
 	logger.info("Начало обновления статьи, с id %s", article.id)
 	conn = None
 	try:
-		conn = connect()
+		conn = connect_pg()
 		with conn.cursor() as cur:
 			query = """
 				UPDATE articles.articles 
@@ -179,7 +178,7 @@ def delete_article(article_id: int) -> None:
 	logger.info("Начало удаления статьи %s", article_id)
 	conn = None
 	try:
-		conn = connect()
+		conn = connect_pg()
 		with conn.cursor() as cur:
 			query = """
 				DELETE FROM articles.articles
