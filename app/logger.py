@@ -74,12 +74,12 @@ def configure_logs(name: str, logs_path: str = "logs/app.log", log_level: int = 
 			encoding='utf-8'
 		)
 		file_handler.setLevel(log_level)
-		file_handler.setFormatter(logging.Formatter('%(asctime)s %(levelname)s: %(message)s'))
+		file_handler.setFormatter(logging.Formatter('%(asctime)s %(levelname)s [%(module)s]: %(message)s'))
 
 		# Добавляем обработчик для консоли
 		console_handler = logging.StreamHandler(sys.stdout)
 		console_handler.setLevel(log_level)
-		console_handler.setFormatter(logging.Formatter('%(asctime)s %(levelname)s: %(message)s'))
+		console_handler.setFormatter(logging.Formatter('%(asctime)s %(levelname)s [%(module)s]: %(message)s'))
 
 		logger.addHandler(file_handler)
 		logger.addHandler(console_handler)
