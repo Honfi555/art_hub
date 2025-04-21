@@ -1,6 +1,6 @@
 from logging import Logger
 
-from psycopg2._psycopg import connection as pg_connection
+from psycopg2.extensions import connection as pg_connection
 from psycopg2.pool import SimpleConnectionPool
 import psycopg2
 import redis
