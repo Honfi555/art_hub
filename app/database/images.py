@@ -118,4 +118,3 @@ def get_image_bytes(article_id: int, image_id: str) -> bytes | None:
     if data is None:
         logger.error("Redis: изображение не найдено: %s", key)
     return data
-
