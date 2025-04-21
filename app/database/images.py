@@ -18,7 +18,7 @@ logger: Logger = configure_logs(__name__)
 
 # Шаблоны ключей для хранения данных в Redis
 ARTICLE_IMAGES_LIST: str = "article:{article_id}:images"
-IMAGE_KEY: str = "image:{image_id}"
+IMAGE_KEY: str = "image:{article_id}:{image_id}"
 
 
 def insert_images(images_data: ImagesAdd) -> list[str]:
@@ -72,10 +72,9 @@ def delete_images(article_id: int, image_ids: list[str]) -> list[str]:
 
     for image_id in image_ids:
         key = IMAGE_KEY.format(article_id=article_id, image_id=image_id)
-        # Удаление изображения из Redis
-        result = client.delete(key)
-        if result:
-            # Удаление идентификатора изображения из списка статьи
+        # Попытка удаления ключа
+        if client.delete(key):
+            # Если ключ был, то удаляем UID из списка
             client.lrem(list_key, 0, image_id)
             deleted.append(image_id)
 
