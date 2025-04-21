@@ -1,9 +1,9 @@
+from sqlite3 import OperationalError, InterfaceError
 from logging import Logger
 import hashlib
 
-from psycopg2 import extensions
+from psycopg2 import extensions, errors
 from psycopg2.extras import DictCursor
-from psycopg2 import OperationalError, InterfaceError, errors
 
 from .connect import connect_pg
 from .exceptions.change_password import *
