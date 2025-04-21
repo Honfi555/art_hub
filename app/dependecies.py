@@ -1,15 +1,15 @@
-from logging import Logger
-from collections.abc import Callable
 from datetime import datetime, timezone, timedelta
-from functools import wraps
+from collections.abc import Callable
 from typing import Optional
+from functools import wraps
+from logging import Logger
 
-import jwt
 from jwt import InvalidTokenError, ExpiredSignatureError
 from fastapi import HTTPException, status
+import jwt
 
-from .logger import configure_logs
 from .static import SECRET_KEY, ALGORITHM
+from .logger import configure_logs
 
 logger: Logger = configure_logs(__name__)
 
