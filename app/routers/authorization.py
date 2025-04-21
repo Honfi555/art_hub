@@ -21,6 +21,7 @@ logger: Logger = configure_logs(__name__)
 
 @authorization_router.post("/sign_in")
 async def sign_in_route(data: SignInData):
+	logger.info(data.login)
 	if not check_login(data.login):
 		raise HTTPException(status.HTTP_404_NOT_FOUND, "Пользователь с таким логином не найден")
 	if not check_credentials(data.login, data.password):
