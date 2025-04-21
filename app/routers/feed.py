@@ -5,8 +5,9 @@ from fastapi import APIRouter, Body, Header, Query, status, HTTPException
 from fastapi.responses import JSONResponse
 
 from ..logger import configure_logs
-from ..dependecies import verify_jwt, get_jwt_login
+from ..utils import verify_jwt, get_jwt_login
 from ..models.articles import ArticleAnnouncement, ArticleData, ArticleFull, ImagesAdd, ArticleAdd
+from ..database.utils import check_article_owner
 from ..database.articles import (select_articles_announcement, select_article, select_article_full, insert_article,
 								 update_article, delete_article)
 from ..database.images import delete_images, insert_images
@@ -60,6 +61,7 @@ async def remove_article_images_route(
 	authorization: str = Header(...)
 ):
 	try:
+		check_article_owner(article_id, get_jwt_login(authorization))
 		deleted = delete_images(article_id, image_ids)
 		return JSONResponse(
 			status_code=status.HTTP_200_OK,
@@ -80,8 +82,8 @@ async def add_article_images_route(
 	authorization: str = Header(...)
 ):
 	try:
-		# insert_images возвращает список сгенерированных UUID
-		created = insert_images(ImagesAdd(article_id=article_id, images=images))
+		check_article_owner(article_id, get_jwt_login(authorization))
+		created: list[str] = insert_images(ImagesAdd(article_id=article_id, images=images))
 		return JSONResponse(
 			status_code=status.HTTP_201_CREATED,
 			content={"created_image_ids": created}
@@ -97,11 +99,10 @@ async def add_article_images_route(
 @verify_jwt
 async def add_article_route(article_data: ArticleAdd, authorization: str = Header(...)):
 	try:
-		login: str = get_jwt_login(authorization)
 		article_id: int = insert_article(
 				ArticleFull(id=0,
 							title=article_data.title,
-							user_name=login,
+							user_name=get_jwt_login(authorization),
 							announcement=article_data.announcement,
 							article_body=article_data.article_body)
 		)
@@ -114,6 +115,7 @@ async def add_article_route(article_data: ArticleAdd, authorization: str = Heade
 @verify_jwt
 async def update_article_route(article_data: ArticleFull, authorization: str = Header(...)):
 	try:
+		check_article_owner(article_data.id, get_jwt_login(authorization))
 		update_article(article_data)
 		return JSONResponse(status_code=status.HTTP_200_OK, content={"message": "success"})
 	except Exception as e:
@@ -124,6 +126,7 @@ async def update_article_route(article_data: ArticleFull, authorization: str = H
 @verify_jwt
 async def remove_article_route(article_id: int, authorization: str = Header(...)):
 	try:
+		check_article_owner(article_id, get_jwt_login(authorization))
 		delete_article(article_id)
 		return JSONResponse(status_code=status.HTTP_200_OK, content={"message": "success"})
 	except Exception as e:

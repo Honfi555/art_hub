@@ -6,7 +6,7 @@ from psycopg2 import errors
 from psycopg2.errorcodes import UNIQUE_VIOLATION
 
 from ..logger import configure_logs
-from ..dependecies import create_jwt, verify_jwt
+from ..utils import create_jwt, verify_jwt
 from ..models.authorization import SignInData, ChangePasswordData
 from ..database.users import process_user, check_credentials, check_login, change_password
 from ..database.exceptions.change_password import *

@@ -4,7 +4,7 @@ from fastapi import APIRouter, Header, status, HTTPException
 from fastapi.responses import JSONResponse
 
 from ..logger import configure_logs
-from ..dependecies import verify_jwt, get_jwt_login
+from ..utils import verify_jwt, get_jwt_login
 from ..models.user_info import AuthorInfo, DescriptionUpdate
 from ..database.users import select_user_info, change_description
 
