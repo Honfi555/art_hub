@@ -63,7 +63,7 @@ def delete_images(article_id: int, image_ids: list[str]) -> list[str]:
 
     :param article_id: Идентификатор статьи, из которой удаляются изображения.
     :param image_ids: Список идентификаторов изображений для удаления.
-    :return: Список реально удалённых идентификаторов изображений.
+    :return: Список удалённых идентификаторов изображений.
     """
     logger.info("Удаление %d изображений для статьи %s", len(image_ids), article_id)
     client = connect_redis()
