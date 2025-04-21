@@ -1,7 +1,9 @@
 from logging import Logger
+
 from fastapi import APIRouter, HTTPException, Header, status
 from fastapi.responses import JSONResponse
-from psycopg2.errors import UniqueViolation
+from psycopg2 import errors
+from psycopg2.errorcodes import UNIQUE_VIOLATION
 
 from ..logger import configure_logs
 from ..dependecies import create_jwt, verify_jwt
@@ -23,7 +25,7 @@ async def sign_in_route(data: SignInData):
 		raise HTTPException(status.HTTP_404_NOT_FOUND, "Пользователь с таким логином не найден")
 	if not check_credentials(data.login, data.password):
 		raise HTTPException(status.HTTP_401_UNAUTHORIZED, "Введён неверный пароль")
-	return JSONResponse(content={"message": "Аутентификация пользователя прошла успешно",
+	return JSONResponse(content={"success": True, "message": "Аутентификация пользователя прошла успешно",
 								 "token": create_jwt(data.login)},
 						status_code=status.HTTP_200_OK)
 
@@ -32,10 +34,10 @@ async def sign_in_route(data: SignInData):
 async def sign_up_route(data: SignInData):
 	try:
 		process_user(user={"login": data.login, "password": data.password, "description": ""})
-		return JSONResponse(content={"message": "Пользователь успешно зарегистрирован",
+		return JSONResponse(content={"success": True, "message": "Пользователь успешно зарегистрирован",
 									 "token": create_jwt(data.login)},
 							status_code=status.HTTP_201_CREATED)
-	except UniqueViolation:
+	except errors.lookup(UNIQUE_VIOLATION):
 		raise HTTPException(status.HTTP_409_CONFLICT, "Пользователь с таким логином уже существует")
 	except Exception as e:
 		logger.exception("Возникла непредвиденная ошибка при регистрации пользователя с логином %s. Ошибка: %s",
@@ -49,7 +51,7 @@ async def sign_up_route(data: SignInData):
 async def change_password_route(data: ChangePasswordData, authorization: str = Header(...)):
 	try:
 		if change_password(data.login, data.old_password, data.new_password):
-			return JSONResponse(content={"message": "Пароль успешно сменён"}, status_code=status.HTTP_200_OK)
+			return JSONResponse(content={"success": True, "message": "Пароль успешно сменён"}, status_code=status.HTTP_200_OK)
 		raise HTTPException(status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
 							detail="Непредвиденная ошибка, на стороне сервера")
 	except (IncorrectLoginException, OldPasswordMismatchException) as e:
