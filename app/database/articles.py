@@ -1,7 +1,7 @@
 from typing import Optional
 from logging import Logger
 
-from psycopg2.errors import OperationalError, InterfaceError
+from sqlite3 import InterfaceError, OperationalError
 
 from .connect import connect_pg
 from ..logger import configure_logs
@@ -148,7 +148,7 @@ def insert_article(article: ArticleFull) -> int | None:
 			conn.close()
 
 
-def update_article(article: ArticleData) -> None:
+def update_article(article: ArticleFull) -> None:
 	logger.info("Начало обновления статьи, с id %s", article.id)
 	conn = None
 	try:
@@ -160,7 +160,7 @@ def update_article(article: ArticleData) -> None:
 				WHERE article_id = %s
 			"""
 			data = (article.title, article.article_body, article.announcement, article.id)
-			cur.executemany(query, data)
+			cur.execute(query, data)
 			conn.commit()
 			logger.info("Обновлена статья, с id %s", article.id)
 	except (OperationalError, InterfaceError) as e:

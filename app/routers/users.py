@@ -18,20 +18,20 @@ logger: Logger = configure_logs(__name__)
 
 @users_router.get("/author")
 @verify_jwt
-async def get_author(author_name: str, authorization: str = Header(...)):
+async def get_author_route(author_name: str, authorization: str = Header(...)):
 	try:
 		author_info: AuthorInfo = select_user_info(username=author_name)
-		return JSONResponse(status_code=status.HTTP_200_OK, content={"author_info": author_info})
+		return JSONResponse(status_code=status.HTTP_200_OK, content={"success": True, "author_info": author_info})
 	except Exception as e:
 		raise HTTPException(status_code=status.HTTP_500_INTERNAL_SERVER_ERROR, detail=str(e))
 
 
 @users_router.post("/update_description")
 @verify_jwt
-async def update_description(data: DescriptionUpdate, authorization: str = Header(...)):
+async def update_description_route(data: DescriptionUpdate, authorization: str = Header(...)):
 	try:
 		login: str = get_jwt_login(authorization)
 		change_description(login, data.description)
-		return JSONResponse(status_code=status.HTTP_200_OK, content={"message": "success"})
+		return JSONResponse(status_code=status.HTTP_200_OK, content={"success": True})
 	except Exception as e:
 		raise HTTPException(status_code=status.HTTP_500_INTERNAL_SERVER_ERROR, detail=str(e))

@@ -21,7 +21,7 @@ logger: Logger = configure_logs(__name__)
 
 @feed_router.get("/articles")
 @verify_jwt
-async def get_articles(authorization: str = Header(...),
+async def get_articles_route(authorization: str = Header(...),
 					   amount: Optional[int] = 10,
 					   chunk: Optional[int] = 1,
 					   login: Optional[str] = None):
@@ -34,7 +34,7 @@ async def get_articles(authorization: str = Header(...),
 
 @feed_router.get("/article")
 @verify_jwt
-async def get_article(article_id: int, authorization: str = Header(...)):
+async def get_article_route(article_id: int, authorization: str = Header(...)):
 	try:
 		article_data: ArticleData = select_article(article_id)
 		return JSONResponse(status_code=status.HTTP_200_OK, content={"article": article_data})
@@ -44,7 +44,7 @@ async def get_article(article_id: int, authorization: str = Header(...)):
 
 @feed_router.get("/article_full")
 @verify_jwt
-async def get_article(article_id: int, authorization: str = Header(...)):
+async def get_article_route(article_id: int, authorization: str = Header(...)):
 	try:
 		article_data: ArticleFull = select_article_full(article_id)
 		return JSONResponse(status_code=status.HTTP_200_OK, content={"article": article_data})
@@ -54,13 +54,12 @@ async def get_article(article_id: int, authorization: str = Header(...)):
 
 @feed_router.delete("/remove_images")
 @verify_jwt
-async def remove_article_images(
+async def remove_article_images_route(
 	article_id: int = Query(..., description="ID статьи"),
 	image_ids: list[str] = Body(..., description="Список ID изображений для удаления"),
 	authorization: str = Header(...)
 ):
 	try:
-		# delete_images теперь принимает article_id и список UUID строк
 		deleted = delete_images(article_id, image_ids)
 		return JSONResponse(
 			status_code=status.HTTP_200_OK,
@@ -75,7 +74,7 @@ async def remove_article_images(
 
 @feed_router.put("/add_images")
 @verify_jwt
-async def add_article_images(
+async def add_article_images_route(
 	article_id: int = Query(..., description="ID статьи"),
 	images: list[str] = Body(..., description="Список base64-строк или URL файлов для вставки"),
 	authorization: str = Header(...)
@@ -96,7 +95,7 @@ async def add_article_images(
 
 @feed_router.post("/add_article")
 @verify_jwt
-async def add_article(article_data: ArticleAdd, authorization: str = Header(...)):
+async def add_article_route(article_data: ArticleAdd, authorization: str = Header(...)):
 	try:
 		login: str = get_jwt_login(authorization)
 		article_id: int = insert_article(
@@ -113,7 +112,7 @@ async def add_article(article_data: ArticleAdd, authorization: str = Header(...)
 
 @feed_router.put("/update_article")
 @verify_jwt
-async def add_article(article_data: ArticleData, authorization: str = Header(...)):
+async def update_article_route(article_data: ArticleFull, authorization: str = Header(...)):
 	try:
 		update_article(article_data)
 		return JSONResponse(status_code=status.HTTP_200_OK, content={"message": "success"})
@@ -123,7 +122,7 @@ async def add_article(article_data: ArticleData, authorization: str = Header(...
 
 @feed_router.delete("/remove_article")
 @verify_jwt
-async def remove_article(article_id: int, authorization: str = Header(...)):
+async def remove_article_route(article_id: int, authorization: str = Header(...)):
 	try:
 		delete_article(article_id)
 		return JSONResponse(status_code=status.HTTP_200_OK, content={"message": "success"})
