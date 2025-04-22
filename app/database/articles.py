@@ -2,13 +2,14 @@ from typing import Optional
 from logging import Logger
 
 from sqlite3 import InterfaceError, OperationalError
+from psycopg2.extras import RealDictCursor
 
 from .connect import connect_pg
 from ..logger import configure_logs
 from ..models.articles import ArticleData, ArticleAnnouncement, ArticleFull
 
 __all__: list[str] = ["select_articles_announcement", "select_article", "select_article_full", "insert_article",
-					  "update_article", "delete_article"]
+					  "update_article", "delete_article", "select_articles_by_search"]
 logger: Logger = configure_logs(__name__)
 
 
@@ -30,14 +31,13 @@ def select_articles_announcement(amount: Optional[int] = None,
 					"""
 			params = []
 			if login:
-				query += "WHERE us.login = %s"
+				query += "\nWHERE us.login = %s"
 				params.append(login)
-			query += "ORDER BY art.article_id DESC"
+			query += "\nORDER BY art.article_id DESC"
 			if amount and chunk:
-				query += """
-				OFFSET %s
-				LIMIT %s
-				"""
+				query += """\nOFFSET %s
+						 \nLIMIT %s
+						 """
 				params.extend([(chunk - 1) * amount, amount])
 			cur.execute(query, params)
 			result = cur.fetchall()
@@ -191,6 +191,83 @@ def delete_article(article_id: int) -> None:
 		raise
 	except Exception as e:
 		logger.error("Ошибка при выполнении запроса: %s", e)
+		raise
+	finally:
+		if conn:
+			conn.close()
+
+
+def select_articles_by_search(
+		query_str: str,
+		amount: Optional[int] = None,
+		chunk: Optional[int] = None,
+		login: Optional[str] = None
+) -> list[dict]:
+	"""
+	Выполняет «умный» поиск по title, announcement и article_body,
+	комбинируя полнотекстовый поиск и fuzzy‑поиск на pg_trgm.
+	"""
+	conn = None
+	try:
+		conn = connect_pg()
+		with conn.cursor(cursor_factory=RealDictCursor) as cur:
+			sql = """ 
+                  WITH q AS (SELECT plainto_tsquery('russian', %s) AS tsq,
+                                    %s::text                       AS rawq),
+                       fts AS (SELECT article_id,
+                                      ts_rank_cd(search_vector, q.tsq) AS rank_fts
+                               FROM articles.articles,
+                                    q
+                               WHERE search_vector @@ q.tsq),
+                       trgm AS (SELECT article_id,
+                                       greatest(
+                                               similarity(title, q.rawq),
+                                               similarity(announcement, q.rawq),
+                                               similarity(article_body, q.rawq)
+                                       ) AS rank_trgm
+                                FROM articles.articles,
+                                     q
+                                WHERE (coalesce(title, '') || ' ' ||
+                                       coalesce(announcement, '') || ' ' ||
+                                       coalesce(article_body, ''))
+                                          %% q.rawq)
+                  SELECT a.article_id,
+                         a.title                                 AS title,
+                         us.login                                AS login,
+                         a.announcement                          AS announcement,
+                         coalesce(fts.rank_fts, 0) * 1.0
+                             + coalesce(trgm.rank_trgm, 0) * 0.5 AS score
+                  FROM articles.articles a
+                           JOIN users.users us
+                                ON a.user_id = us.id
+                           LEFT JOIN fts ON fts.article_id = a.article_id
+                           LEFT JOIN trgm ON trgm.article_id = a.article_id
+				  """
+			params: list = [query_str, query_str]
+
+			if login:
+				sql += "\nWHERE us.login = %s AND "
+				params.append(login)
+			else:
+				sql += "\nWHERE "
+			sql += "(coalesce(fts.rank_fts, 0) * 1.0 + coalesce(trgm.rank_trgm, 0) * 0.5) > 0"
+
+			sql += "\nORDER BY score DESC"
+
+			if amount is not None and chunk is not None:
+				sql += "\nOFFSET %s LIMIT %s"
+				params.extend([(chunk - 1) * amount, amount])
+
+			cur.execute(sql, params)
+			rows = cur.fetchall()
+			logger.info("Найдено %d статей по запросу %r", len(rows), query_str)
+
+			return rows
+	except (OperationalError, InterfaceError) as e:
+		logger.error("Ошибка соединения: %s", e)
+		raise
+	except Exception as e:
+		logger.error("Ошибка при выполнении поиска: %s", e)
 		raise
 	finally:
 		if conn:
