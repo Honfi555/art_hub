@@ -234,7 +234,6 @@ def select_articles_by_search(
                   SELECT a.article_id,
                          a.title                                 AS title,
                          us.login                                AS login,
-                         a.announcement                          AS announcement,
                          coalesce(fts.rank_fts, 0) * 1.0
                              + coalesce(trgm.rank_trgm, 0) * 0.5 AS score
                   FROM articles.articles a
