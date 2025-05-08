@@ -22,12 +22,12 @@ def select_articles_announcement(amount: Optional[int] = None,
 		conn = connect_pg()
 		with conn.cursor() as cur:
 			query = """
-                    SELECT art.article_id,
-                           art.title,
-                           us.login,
-                           art.announcement
-                    FROM articles.articles art
-                             JOIN users.users us ON art.user_id = us.id
+					SELECT art.article_id,
+						   art.title,
+						   us.login,
+						   art.announcement
+					FROM articles.articles art
+							 JOIN users.users us ON art.user_id = us.id
 					"""
 			params = []
 			if login:
