@@ -5,7 +5,7 @@ from fastapi import APIRouter, Body, Header, Query, status, HTTPException
 from fastapi.responses import JSONResponse
 
 from ..logger import configure_logs
-from ..utils import verify_jwt, get_jwt_login
+from ..utils import normalize_article_text, verify_jwt, get_jwt_login
 from ..models.articles import ArticleAnnouncement, ArticleData, ArticleFull, ImagesAdd, ArticleAdd
 from ..database.utils import check_article_owner
 from ..database.articles import (select_articles_announcement, select_article, select_article_full, insert_article,
@@ -108,8 +108,8 @@ async def add_article_route(article_data: ArticleAdd, authorization: str = Heade
 			ArticleFull(id=0,
 						title=article_data.title,
 						user_name=get_jwt_login(authorization),
-						announcement=article_data.announcement,
-						article_body=article_data.article_body)
+						announcement=normalize_article_text(article_data.announcement),
+						article_body=normalize_article_text(article_data.article_body))
 		)
 		return JSONResponse(status_code=status.HTTP_200_OK, content={"success": True, "article_id": article_id})
 	except Exception as e:
