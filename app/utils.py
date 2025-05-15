@@ -3,6 +3,7 @@ from collections.abc import Callable
 from typing import Optional
 from functools import wraps
 from logging import Logger
+import re
 
 from jwt import InvalidTokenError, ExpiredSignatureError
 from fastapi import HTTPException, status
@@ -68,3 +69,7 @@ def get_jwt_login(authorization: str) -> str:
         raise HTTPException(status.HTTP_401_UNAUTHORIZED, "Неверный payload токена")
 
     return decoded_info["username"]
+
+
+def normalize_article_text(text: str) -> str:
+    return re.sub(r"\n", "\n<br>", text)
