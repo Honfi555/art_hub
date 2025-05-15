@@ -122,7 +122,11 @@ async def add_article_route(article_data: ArticleAdd, authorization: str = Heade
 async def update_article_route(article_data: ArticleFull, authorization: str = Header(...)):
 	try:
 		check_article_owner(article_data.id, get_jwt_login(authorization))
-		update_article(article_data)
+		update_article(ArticleFull(id=article_data.id,
+								   title=article_data.title,
+								   user_name=article_data.user_name,
+								   announcement=normalize_article_text(article_data.announcement),
+								   article_body=normalize_article_text(article_data.article_body)))
 		return JSONResponse(status_code=status.HTTP_200_OK, content={"success": True})
 	except Exception as e:
 		logger.error("An error excepted in update_article route, error: %s", str(e))

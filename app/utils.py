@@ -72,4 +72,5 @@ def get_jwt_login(authorization: str) -> str:
 
 
 def normalize_article_text(text: str) -> str:
+    text = re.sub(r"<br>", "", text)
     return re.sub(r"\n", "\n<br>", text)
