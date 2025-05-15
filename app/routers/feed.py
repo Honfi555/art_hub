@@ -144,9 +144,11 @@ async def remove_article_route(article_id: int, authorization: str = Header(...)
 @feed_router.get("/search_articles")
 @verify_jwt
 async def search_articles_route(query: str, amount: Optional[int] = 5, chunk: Optional[int] = 1,
-								login: Optional[int] = None, announcement: Optional[bool] = False, authorization: str = Header(...)):
+								login: Optional[int] = None, announcement: Optional[bool] = False,
+								authorization: str = Header(...)):
 	try:
-		result: list[dict] = select_articles_by_search(query_str=query, amount=amount, chunk=chunk, login=login, announcement=announcement)
+		result: list[dict] = select_articles_by_search(query_str=query, amount=amount, chunk=chunk, login=login,
+													   announcement=announcement)
 		return JSONResponse(status_code=status.HTTP_200_OK, content={"success": True, "results": result})
 	except Exception as e:
 		logger.error("An error excepted in search_articles route, error: %s", str(e))
